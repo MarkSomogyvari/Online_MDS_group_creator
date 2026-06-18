@@ -129,8 +129,10 @@ async def calculate_mds():
         
         for i in range(n):
             for j in range(n):
-                if i != j:
-                    distance_matrix[i, j] = (distance_matrix[i, j] + distance_matrix[j, i]) / 2
+                if i < j:
+                    avg = (distance_matrix[i, j] + distance_matrix[j, i]) / 2
+                    distance_matrix[i, j] = avg
+                    distance_matrix[j, i] = avg
         
         np.fill_diagonal(distance_matrix, 0)
         
