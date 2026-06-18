@@ -180,7 +180,7 @@
                         <span class="font-medium text-gray-800">${participant.name}</span>
                     </div>
                     <div class="flex items-center space-x-4">
-                        <span class="text-sm text-gray-600">Not Similar</span>
+                        <span class="text-sm text-gray-600">1</span>
                         <input type="range" 
                                min="1" 
                                max="5" 
@@ -189,7 +189,7 @@
                                data-rated-id="${participant.id}"
                                class="w-48 h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
                                oninput="updateScore(${participant.id}, this.value, this)">
-                        <span class="text-sm text-gray-600">Highly Similar</span>
+                        <span class="text-sm text-gray-600">5</span>
                         <span id="score-${participant.id}" 
                               class="w-8 text-center font-semibold text-blue-600">${currentScore}</span>
                     </div>

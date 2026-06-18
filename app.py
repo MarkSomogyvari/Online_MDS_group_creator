@@ -100,7 +100,7 @@ async def submit_scores(score_input: ScoreInput, rater_id: int):
                 score = 3
             conn.execute(
                 """INSERT OR REPLACE INTO scores (rater_id, rated_id, score) VALUES (?, ?, ?)""",
-                (rater_id_id, int(rated_id_str), score)
+                (rater_id, int(rated_id_str), score)
             )
         conn.commit()
         return {"status": "success"}
@@ -109,11 +109,15 @@ async def submit_scores(score_input: ScoreInput, rater_id: int):
 async def calculate_mds():
     with get_db() as conn:
         participants = conn.execute("SELECT id, name FROM participants").fetchall()
-        if len(participants) < 2:
-            raise HTTPException(status_code=400, detail="Need at least 2 participants")
+        
+        if len(participants) < 1:
+            raise HTTPException(status_code=400, detail="No participants found")
         
         participant_ids = [p["id"] for p in participants]
         n = len(participant_ids)
+        
+        if n == 1:
+            raise HTTPException(status_code=400, detail="Need at least 2 participants for MDS")
         
         distance_matrix = np.full((n, n), 3.0)
         
