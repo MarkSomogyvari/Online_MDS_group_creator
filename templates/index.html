@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Workshop Group Finder</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body class="bg-gray-100 min-h-screen">
+    <div class="container mx-auto px-4 py-8">
+        <header class="text-center mb-12">
+            <h1 class="text-4xl font-bold text-gray-800 mb-2">
+                <i class="fa fa-users text-blue-600 mr-2"></i>Workshop Group Finder
+            </h1>
+            <p class="text-gray-600">Find your perfect group based on interest similarities</p>
+        </header>
+
+        <div id="app">
+            <!-- Landing Page -->
+            <div id="landing-page" class="max-w-md mx-auto bg-white rounded-lg shadow-md p-8">
+                <h2 class="text-2xl font-semibold text-gray-800 mb-6 text-center">
+                    Enter Your Name
+                </h2>
+                <div class="mb-4">
+                    <input type="text" id="participant-name" 
+                           class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                           placeholder="Enter your name">
+                </div>
+                <button onclick="registerParticipant()" 
+                        class="w-full bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 transition-colors">
+                    Start Participating
+                </button>
+                <p id="landing-message" class="mt-4 text-center text-sm text-gray-600"></p>
+            </div>
+
+            <!-- Scores Page -->
+            <div id="scores-page" class="hidden">
+                <div class="flex justify-between items-center mb-6">
+                    <h2 class="text-2xl font-semibold text-gray-800">
+                        Rate Other Participants
+                    </h2>
+                    <button onclick="showVisualization()" 
+                            class="bg-green-600 text-white py-2 px-4 rounded-lg hover:bg-green-700 transition-colors">
+                        <i class="fa fa-chart-bar mr-2"></i>See Results
+                    </button>
+                </div>
+                <div id="score-form" class="bg-white rounded-lg shadow-md p-6">
+                    <div id="ratings-container" class="space-y-4">
+                        <!-- Ratings will be generated here -->
+                    </div>
+                </div>
+                <button onclick="submitScores()" 
+                        class="mt-6 w-full bg-blue-600 text-white py-3 px-4 rounded-lg hover:bg-blue-700 transition-colors text-lg">
+                    <i class="fa fa-save mr-2"></i>Submit Scores
+                </button>
+                <p id="scores-message" class="mt-4 text-center text-sm text-gray-600"></p>
+            </div>
+
+            <!-- Visualization Page -->
+            <div id="visualization-page" class="hidden">
+                <div class="flex justify-between items-center mb-6">
+                    <h2 class="text-2xl font-semibold text-gray-800">
+                        Group Distribution
+                    </h2>
+                    <button onclick="resetApplication()" 
+                            class="bg-gray-600 text-white py-2 px-4 rounded-lg hover:bg-gray-700 transition-colors">
+                        <i class="fa fa-redo mr-2"></i>Start Over
+                    </button>
+                </div>
+                <div class="bg-white rounded-lg shadow-md p-6">
+                    <div id="visualization" class="w-full h-[600px]"></div>
+                </div>
+                <p id="viz-message" class="mt-4 text-center text-sm text-gray-600"></p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentParticipantId = null;
+        let participants = [];
+        let myScores = {};
+
+        // Initialize the app
+        async function init() {
+            try {
+                const response = await fetch('/participants');
+                participants = await response.json();
+                
+                if (participants.length > 0) {
+                    if (localStorage.getItem('currentParticipantId')) {
+                        showScoresPage();
+                    }
+                }
+            } catch (error) {
+                console.error('Error initializing:', error);
+            }
+        }
+
+        // Register a new participant
+        async function registerParticipant() {
+            const name = document.getElementById('participant-name').value.trim();
+            
+            if (!name) {
+                showLandingMessage('Please enter your name', 'text-red-600');
+                return;
+            }
+
+            try {
+                const response = await fetch('/participants', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name })
+                });
+
+                const data = await response.json();
+                
+                if (response.ok) {
+                    currentParticipantId = data.id;
+                    localStorage.setItem('currentParticipantId', data.id);
+                    showLandingMessage(`Welcome, ${name}!`, 'text-green-600');
+                    setTimeout(() => showScoresPage(), 1500);
+                } else {
+                    showLandingMessage(data.detail || 'Error registering participant', 'text-red-600');
+                }
+            } catch (error) {
+                showLandingMessage('Error registering participant', 'text-red-600');
+            }
+        }
+
+        // Show scores page
+        async function showScoresPage() {
+            currentParticipantId = parseInt(localStorage.getItem('currentParticipantId'));
+            
+            if (!currentParticipantId) {
+                showLandingPage();
+                return;
+            }
+
+            try {
+                const response = await fetch('/participants');
+                participants = await response.json();
+                
+                const scoresResponse = await fetch(`/scores?rater_id=${currentParticipantId}`);
+                myScores = await scoresResponse.json();
+
+                document.getElementById('landing-page').classList.add('hidden');
+                document.getElementById('scores-page').classList.remove('hidden');
+
+                renderRatings();
+            } catch (error) {
+                console.error('Error loading scores page:', error);
+            }
+        }
+
+        // Render rating sliders
+        function renderRatings() {
+            const container = document.getElementById('ratings-container');
+            container.innerHTML = '';
+
+            const otherParticipants = participants.filter(p => p.id !== currentParticipantId);
+
+            if (otherParticipants.length === 0) {
+                container.innerHTML = '<p class="text-gray-600">No other participants yet. Wait for others to join!</p>';
+                return;
+            }
+
+            otherParticipants.forEach(participant => {
+                const currentScore = myScores[participant.id] || 3;
+                
+                const div = document.createElement('div');
+                div.className = 'flex items-center justify-between p-4 bg-gray-50 rounded-lg';
+                
+                div.innerHTML = `
+                    <div class="flex items-center">
+                        <div class="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-semibold mr-4">
+                            ${participant.name.charAt(0).toUpperCase()}
+                        </div>
+                        <span class="font-medium text-gray-800">${participant.name}</span>
+                    </div>
+                    <div class="flex items-center space-x-4">
+                        <span class="text-sm text-gray-600">Not Similar</span>
+                        <input type="range" 
+                               min="1" 
+                               max="5" 
+                               step="1" 
+                               value="${currentScore}"
+                               data-rated-id="${participant.id}"
+                               class="w-48 h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
+                               oninput="updateScore(${participant.id}, this.value, this)">
+                        <span class="text-sm text-gray-600">Highly Similar</span>
+                        <span id="score-${participant.id}" 
+                              class="w-8 text-center font-semibold text-blue-600">${currentScore}</span>
+                    </div>
+                `;
+                
+                container.appendChild(div);
+            });
+        }
+
+        // Update score display
+        window.updateScore = function(ratedId, value, slider) {
+            myScores[ratedId] = parseInt(value);
+            document.getElementById(`score-${ratedId}`).textContent = value;
+        }
+
+        // Submit scores
+        async function submitScores() {
+            try {
+                const scoresToSubmit = {};
+                const ratings = document.querySelectorAll('input[type="range"]');
+                
+                ratings.forEach(rating => {
+                    const ratedId = parseInt(rating.dataset.ratedId);
+                    const score = parseInt(rating.value);
+                    scoresToSubmit[ratedId] = score;
+                });
+
+                const response = await fetch(`/scores?rater_id=${currentParticipantId}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ scores: scoresToSubmit })
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    document.getElementById('scores-message').innerHTML = 
+                        '<i class="fa fa-check text-green-600"></i> Scores submitted successfully!';
+                    document.getElementById('scores-message').className = 'mt-4 text-center text-sm text-green-600';
+                } else {
+                    document.getElementById('scores-message').innerHTML = 
+                        `<i class="fa fa-exclamation-triangle text-red-600"></i> ${data.detail}`;
+                    document.getElementById('scores-message').className = 'mt-4 text-center text-sm text-red-600';
+                }
+            } catch (error) {
+                document.getElementById('scores-message').innerHTML = 
+                    '<i class="fa fa-exclamation-triangle text-red-600"></i> Error submitting scores';
+                document.getElementById('scores-message').className = 'mt-4 text-center text-sm text-red-600';
+            }
+        }
+
+        // Show visualization
+        async function showVisualization() {
+            try {
+                document.getElementById('scores-page').classList.add('hidden');
+                document.getElementById('visualization-page').classList.remove('hidden');
+
+                const response = await fetch('/mds');
+                const data = await response.json();
+
+                const trace = {
+                    x: data.map(d => d.x),
+                    y: data.map(d => d.y),
+                    text: data.map(d => d.name),
+                    mode: 'markers+text',
+                    type: 'scatter',
+                    marker: {
+                        size: 12,
+                        color: 'blue',
+                        opacity: 0.7
+                    },
+                    textposition: 'top center',
+                    textfont: {
+                        color: 'blue'
+                    }
+                };
+
+                const layout = {
+                    title: 'Participant Similarity Distribution (MDS)',
+                    xaxis: { title: 'Dimension 1' },
+                    yaxis: { title: 'Dimension 2' },
+                    showlegend: false,
+                    hovermode: 'closest'
+                };
+
+                const config = {
+                    responsive: true,
+                    displayModeBar: true
+                };
+
+                Plotly.newPlot('visualization', [trace], layout, config);
+            } catch (error) {
+                console.error('Error loading visualization:', error);
+            }
+        }
+
+        // Show landing page
+        function showLandingPage() {
+            document.getElementById('landing-page').classList.remove('hidden');
+            document.getElementById('scores-page').classList.add('hidden');
+            document.getElementById('visualization-page').classList.add('hidden');
+            document.getElementById('participant-name').value = '';
+        }
+
+        // Show scores page
+        function showScoresPage() {
+            document.getElementById('landing-page').classList.add('hidden');
+            document.getElementById('scores-page').classList.remove('hidden');
+            document.getElementById('visualization-page').classList.add('hidden');
+        }
+
+        // Reset application
+        function resetApplication() {
+            localStorage.removeItem('currentParticipantId');
+            currentParticipantId = null;
+            myScores = {};
+            showLandingPage();
+        }
+
+        // Helper functions for messages
+        function showLandingMessage(message, className) {
+            const el = document.getElementById('landing-message');
+            el.innerHTML = `<i class="fa fa-info-circle ${className}"></i> ${message}`;
+            el.className = `mt-4 text-center text-sm ${className}`;
+        }
+
+        // Initialize on load
+        init();
+    </script>
+</body>
+</html>
