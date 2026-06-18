@@ -29,3 +29,8 @@ A web-based interactive group-making application that collects user interest sim
 1. **Dissimilarity Conversion**: Convert similarity scores (1-5) to distances using `Distance = 6 - Score`
 2. **Matrix Symmetrization**: Average asymmetric ratings: `D_ij = (D_i→j + D_j→i) / 2`
 3. **Dimensionality Reduction**: Apply MDS with precomputed distances to get 2D coordinates
+
+## Development
+
+- Logged every development step in git commits
+- Use `git log` to see the development history

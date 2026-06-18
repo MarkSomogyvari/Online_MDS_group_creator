@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Workshop Group Finder - Admin Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%);
+        }
+        .glass-card {
+            background: rgba(255, 255, 255, 0.03);
+            backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+    </style>
+</head>
+<body class="min-h-screen text-slate-100 flex flex-col justify-between">
+    <div class="container mx-auto px-4 py-8 max-w-5xl flex-grow">
+        <!-- Auth View -->
+        <div id="auth-panel" class="max-w-md mx-auto mt-20 glass-card rounded-2xl p-8 shadow-2xl relative overflow-hidden transition-all duration-300">
+            <div class="absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500"></div>
+            <div class="text-center mb-8">
+                <div class="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-indigo-500/10 text-indigo-400 mb-4 border border-indigo-500/20">
+                    <i class="fa fa-lock-open text-2xl"></i>
+                </div>
+                <h2 class="text-2xl font-bold tracking-tight">Admin Authentication</h2>
+                <p class="text-slate-400 text-sm mt-1">Please enter the administrator password</p>
+            </div>
+            
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">Password</label>
+                    <input type="password" id="admin-pass-input" 
+                           class="w-full px-4 py-3 bg-slate-950/50 border border-slate-800 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 text-white transition-all placeholder:text-slate-600"
+                           placeholder="••••••••"
+                           onkeydown="if(event.key === 'Enter') authenticate()">
+                </div>
+                <button onclick="authenticate()" 
+                        class="w-full bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-semibold py-3 rounded-xl hover:from-indigo-500 hover:to-purple-500 active:scale-[0.98] transition-all shadow-lg shadow-indigo-600/20">
+                    Unlock Dashboard
+                </button>
+                <p id="auth-error" class="text-center text-sm text-rose-500 hidden"></p>
+            </div>
+        </div>
+
+        <!-- Dashboard View -->
+        <div id="dashboard-panel" class="hidden space-y-8">
+            <!-- Header -->
+            <header class="flex flex-col md:flex-row md:items-center md:justify-between gap-4 glass-card p-6 rounded-2xl">
+                <div class="flex items-center space-x-4">
+                    <div class="w-12 h-12 rounded-xl bg-indigo-600/20 flex items-center justify-center text-indigo-400 border border-indigo-500/20">
+                        <i class="fa fa-sliders text-xl"></i>
+                    </div>
+                    <div>
+                        <h1 class="text-2xl font-bold text-white tracking-tight">Control Panel</h1>
+                        <p class="text-slate-400 text-sm">Manage participants and group matching configuration</p>
+                    </div>
+                </div>
+                <div class="flex items-center space-x-3">
+                    <a href="/" target="_blank" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 text-sm font-medium rounded-xl transition-colors border border-slate-700">
+                        <i class="fa fa-external-link mr-2"></i>Go to App
+                    </a>
+                    <button onclick="logout()" class="px-4 py-2 bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 text-sm font-medium rounded-xl transition-colors border border-rose-500/20">
+                        <i class="fa fa-sign-out-alt mr-2"></i>Lock
+                    </button>
+                </div>
+            </header>
+
+            <!-- Grid: Stats & Controls -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <!-- Stats 1 -->
+                <div class="glass-card p-6 rounded-2xl flex items-center space-x-4">
+                    <div class="w-12 h-12 rounded-xl bg-cyan-500/10 flex items-center justify-center text-cyan-400 border border-cyan-500/20">
+                        <i class="fa fa-user-friends text-xl"></i>
+                    </div>
+                    <div>
+                        <p class="text-slate-400 text-xs font-semibold uppercase tracking-wider">Total Users</p>
+                        <h3 id="stat-users" class="text-2xl font-bold mt-1">0</h3>
+                    </div>
+                </div>
+                <!-- Stats 2 -->
+                <div class="glass-card p-6 rounded-2xl flex items-center space-x-4">
+                    <div class="w-12 h-12 rounded-xl bg-emerald-500/10 flex items-center justify-center text-emerald-400 border border-emerald-500/20">
+                        <i class="fa fa-star text-xl"></i>
+                    </div>
+                    <div>
+                        <p class="text-slate-400 text-xs font-semibold uppercase tracking-wider">Ratings Made</p>
+                        <h3 id="stat-ratings" class="text-2xl font-bold mt-1">0</h3>
+                    </div>
+                </div>
+                <!-- Actions -->
+                <div class="glass-card p-6 rounded-2xl flex flex-col justify-center space-y-2">
+                    <button onclick="loadMockData()" class="w-full bg-indigo-600/20 hover:bg-indigo-600/30 text-indigo-300 font-semibold py-2 px-4 rounded-xl border border-indigo-500/20 transition-all text-sm flex items-center justify-center">
+                        <i class="fa fa-database mr-2"></i>Load Demo Data
+                    </button>
+                    <button onclick="confirmReset()" class="w-full bg-rose-600/20 hover:bg-rose-600/30 text-rose-300 font-semibold py-2 px-4 rounded-xl border border-rose-500/20 transition-all text-sm flex items-center justify-center">
+                        <i class="fa fa-trash-alt mr-2"></i>Reset Database
+                    </button>
+                </div>
+            </div>
+
+            <!-- Participants Table -->
+            <div class="glass-card rounded-2xl overflow-hidden">
+                <div class="px-6 py-4 border-b border-slate-800 flex justify-between items-center bg-slate-950/20">
+                    <h3 class="font-bold text-lg">Active Participants</h3>
+                    <button onclick="loadDashboardData()" class="text-slate-400 hover:text-white transition-colors">
+                        <i class="fa fa-sync-alt"></i>
+                    </button>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left border-collapse">
+                        <thead>
+                            <tr class="border-b border-slate-800 text-slate-400 text-xs uppercase tracking-wider">
+                                <th class="px-6 py-3 font-semibold">Name</th>
+                                <th class="px-6 py-3 font-semibold">Joined At</th>
+                                <th class="px-6 py-3 font-semibold text-center">Scores Submitted</th>
+                                <th class="px-6 py-3 font-semibold text-right">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="participants-tbody" class="divide-y divide-slate-800/50">
+                            <!-- Rows dynamically populated -->
+                        </tbody>
+                    </table>
+                </div>
+                <div id="no-participants-msg" class="text-center py-12 text-slate-400 hidden">
+                    <i class="fa fa-info-circle text-2xl mb-2 text-slate-600 block"></i>
+                    No participants registered yet. Use the client application to register, or click "Load Demo Data".
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <footer class="py-6 text-center text-xs text-slate-500 border-t border-slate-800/50 mt-12 bg-slate-950/20">
+        Workshop Group Finder &copy; 2026 - Control Panel
+    </footer>
+
+    <script>
+        let adminPassword = localStorage.getItem('admin_password') || '';
+
+        function authenticate() {
+            const pass = document.getElementById('admin-pass-input').value;
+            validatePasswordAndLoad(pass);
+        }
+
+        async function validatePasswordAndLoad(password) {
+            try {
+                const response = await fetch('/admin/participants-details', {
+                    headers: { 'X-Admin-Password': password }
+                });
+                
+                if (response.ok) {
+                    adminPassword = password;
+                    localStorage.setItem('admin_password', password);
+                    document.getElementById('auth-panel').classList.add('hidden');
+                    document.getElementById('dashboard-panel').classList.remove('hidden');
+                    document.getElementById('auth-error').classList.add('hidden');
+                    renderDashboard(await response.json());
+                } else {
+                    const errorMsg = document.getElementById('auth-error');
+                    errorMsg.textContent = 'Invalid password. Please try again.';
+                    errorMsg.classList.remove('hidden');
+                }
+            } catch (err) {
+                console.error(err);
+            }
+        }
+
+        async function loadDashboardData() {
+            if (!adminPassword) return;
+            try {
+                const response = await fetch('/admin/participants-details', {
+                    headers: { 'X-Admin-Password': adminPassword }
+                });
+                if (response.status === 401) {
+                    logout();
+                    return;
+                }
+                if (response.ok) {
+                    renderDashboard(await response.json());
+                }
+            } catch (err) {
+                console.error(err);
+            }
+        }
+
+        function renderDashboard(data) {
+            document.getElementById('stat-users').textContent = data.length;
+            
+            let ratingsCount = 0;
+            const tbody = document.getElementById('participants-tbody');
+            tbody.innerHTML = '';
+
+            if (data.length === 0) {
+                document.getElementById('no-participants-msg').classList.remove('hidden');
+            } else {
+                document.getElementById('no-participants-msg').classList.add('hidden');
+            }
+
+            data.forEach(p => {
+                const scoresSubmitted = Object.keys(p.scores).length;
+                ratingsCount += scoresSubmitted;
+                
+                const tr = document.createElement('tr');
+                tr.className = 'hover:bg-white/5 transition-colors';
+                
+                // Format date nicely
+                const joinedDate = new Date(p.created_at).toLocaleString();
+
+                tr.innerHTML = `
+                    <td class="px-6 py-4 font-medium flex items-center space-x-3">
+                        <div class="w-8 h-8 rounded-lg bg-indigo-500/10 text-indigo-400 flex items-center justify-center font-bold border border-indigo-500/20">
+                            ${p.name.charAt(0).toUpperCase()}
+                        </div>
+                        <span>${p.name}</span>
+                    </td>
+                    <td class="px-6 py-4 text-sm text-slate-400">${joinedDate}</td>
+                    <td class="px-6 py-4 text-center">
+                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${scoresSubmitted > 0 ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'bg-amber-500/10 text-amber-400 border border-amber-500/20'}">
+                            ${scoresSubmitted} / ${data.length - 1}
+                        </span>
+                    </td>
+                    <td class="px-6 py-4 text-right">
+                        <button onclick="deleteParticipant(${p.id}, '${p.name}')" 
+                                class="text-rose-400 hover:text-rose-300 hover:bg-rose-500/10 p-2 rounded-lg transition-all">
+                            <i class="fa fa-trash-alt"></i>
+                        </button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+
+            document.getElementById('stat-ratings').textContent = ratingsCount;
+        }
+
+        async function deleteParticipant(id, name) {
+            if (!confirm(`Are you sure you want to delete participant "${name}"?`)) return;
+            try {
+                const response = await fetch(`/admin/participants/${id}`, {
+                    method: 'DELETE',
+                    headers: { 'X-Admin-Password': adminPassword }
+                });
+                if (response.ok) {
+                    loadDashboardData();
+                }
+            } catch (err) {
+                console.error(err);
+            }
+        }
+
+        async function loadMockData() {
+            if (!confirm("This will clear the current database and populate it with sample participants and pairwise scores. Proceed?")) return;
+            try {
+                const response = await fetch('/admin/mock', {
+                    method: 'POST',
+                    headers: { 'X-Admin-Password': adminPassword }
+                });
+                if (response.ok) {
+                    loadDashboardData();
+                }
+            } catch (err) {
+                console.error(err);
+            }
+        }
+
+        async function confirmReset() {
+            if (!confirm("WARNING: This will permanently delete ALL participants and scores. This cannot be undone! Proceed?")) return;
+            try {
+                const response = await fetch('/admin/reset', {
+                    method: 'POST',
+                    headers: { 'X-Admin-Password': adminPassword }
+                });
+                if (response.ok) {
+                    loadDashboardData();
+                }
+            } catch (err) {
+                console.error(err);
+            }
+        }
+
+        function logout() {
+            adminPassword = '';
+            localStorage.removeItem('admin_password');
+            document.getElementById('auth-panel').classList.remove('hidden');
+            document.getElementById('dashboard-panel').classList.add('hidden');
+            document.getElementById('admin-pass-input').value = '';
+        }
+
+        // Auto auth if password stored
+        if (adminPassword) {
+            validatePasswordAndLoad(adminPassword);
+        }
+    </script>
+</body>
+</html>
