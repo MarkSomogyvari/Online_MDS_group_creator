@@ -13,6 +13,7 @@ from contextlib import contextmanager
 
 app = FastAPI(title="Workshop Group Finder")
 
+os.makedirs("static", exist_ok=True)
 app.mount("/static", StaticFiles(directory="static"), name="static")
 templates = Jinja2Templates(directory="templates")
 
